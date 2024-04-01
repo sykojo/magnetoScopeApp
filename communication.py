@@ -14,6 +14,7 @@ class CommunicationWrapper:
 class DataDecode:
     def __init__(self, communication_wrapper:CommunicationWrapper) -> None:
         self.raw_buffer = bytearray()
+        self.time_samples = []
         # self.decoded_buffer = list[tuple[int,int,int]]
         self.communication = communication_wrapper
         self.data_miss = 0
@@ -42,4 +43,14 @@ class DataDecode:
                 temp_tuple =[]
             last = i
         return result
+    
+    def print_decoded_data(self,data:list[tuple[int,int,int]]):
+        if len(data) != 0:
+            print("--------------------------------------------------")
+            for i, (x, y, z) in enumerate(data):
+                print(f"sensor number:{i} -> x:{x}, y:{y}, z:{z}")
+            print("--------------------------------------------------")
+    
+
+    
     
