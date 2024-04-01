@@ -1,65 +1,49 @@
-from communication import CommunicationWrapper,DataDecode,Serial
-import time
+from serial_thread import SerialThread
+from communication import DataDecode, CommunicationWrapper, Serial
+
 import pyqtgraph as pg
+
 from visualisation import Window, SensorData
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import QTimer
+from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QTimer
+
 import sys
 import threading
 
 
-
-def read_serial(samples_buf:list,decode:DataDecode,lock:threading.Lock,app_exit:threading.Event):
-    max_t_samples=10000
-    while not app_exit.is_set():
-        print(f"Samples buffer length: {len(samples_buf)}")
-        data = decode.get_all()
-        #decode.print_decoded_data(data)
-        if len(samples_buf)<max_t_samples:
-            if(len(data) != 0):
-                with lock:
-                    samples_buf.append(data)
-                    
-        else:
-            print("Time Samples Buffer is full")
-
-        
-        time.sleep(0.03)
-            
-
+def data_count(serial_thread:SerialThread):
+    data = serial_thread.get_samples()
+    return len(data)//8
+    
 
 def main():
-
-
     app = QApplication(sys.argv)
     window = Window()
-    lock=threading.Lock()
+    lock = threading.Lock()
     app_exit = threading.Event()
-    app.aboutToQuit.connect(lambda:window.app_exit(app_exit))
-    decode = DataDecode(CommunicationWrapper(Serial("COM9", 115200)))
-    time_samples:list[list[tuple[int,int,int]]] = []
-    sensor_data = SensorData(time_samples)
-    timer = QTimer()
-    timer.timeout.connect(window.p1.animate)
-    timer.start(10)
-    window.p1.setTimeSamples(time_samples)
+    app.aboutToQuit.connect(lambda: window.app_exit(app_exit))
 
-    serialThread = threading.Thread(target=lambda:read_serial(time_samples,decode,lock,app_exit))
+    decode = DataDecode(CommunicationWrapper(Serial("COM9", 115200)))
+    serial_thread = SerialThread(decode, app_exit)
+
+    # sensor_data = SensorData()
+    # timer = QTimer()
+    # timer.timeout.connect(window.p1.animate)
+    # timer.start(10)
+    # window.p1.setTimeSamples()
+
+    serialThread = threading.Thread(target=lambda: serial_thread.run_read_serial())
     serialThread.start()
 
-    #read_till_end_of_time(decode)
+    count = 0
+    while True:
+        count += data_count(serial_thread)
+        print(count)
+        time.sleep()
 
-    sys.exit(app.exec())
+    # sys.exit(app.exec())
+
 
 if __name__ == "__main__":
-
     main()
-    
-
-
-    
-
-
-    
-    
-    #app.exec()
+    # app.exec()
