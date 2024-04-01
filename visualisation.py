@@ -12,11 +12,11 @@ class Axes:
         z=2
 
 class SensorData:
-    def __init__(self,time_samples:list[tuple[int,int,int]]) -> None:
+    def __init__(self,time_samples:list[list[tuple[int,int,int]]]) -> None:
         self.time_samples = time_samples
 
-    def get_sen_axis_data(self,axis:int,sen:int) -> int:
-        return self.time_samples[sen][axis]
+    """ def get_sen_axis_data(self,axis:int,sen:int) -> int:
+        return self.time_samples[sen][axis] """
 
 class QtGraphWrapper:
     def __init__(self,plt:pg.PlotItem,x_label:str,y_label:str,title:str) -> None:
@@ -43,12 +43,10 @@ class QtGraphWrapper:
         self.time_samples=data
 
     def create_frame(self,sen,axis) -> list:
-        try:
-            print(f"frame: {self.time_samples[:self.n_samples][sen][axis]}")
-            return self.time_samples[:self.n_samples][sen][axis]
-        except:
-            print("Not enough samples")
-            return []
+        #print(f"samples: {self.time_samples}")
+        #print(f"frame: {[sublist[sen][axis] for sublist in self.time_samples[:self.n_samples]]}")
+        return [sublist[sen][axis] for sublist in self.time_samples[:self.n_samples]]
+        
             
     def convert2Np(self,data:list)-> np.ndarray:
         np_array = np.array(data)
@@ -59,6 +57,14 @@ class QtGraphWrapper:
         x_axis = np.linspace(0,self.n_samples,self.n_samples)
 
         self.plt.plot(x_axis,frame)
+        if(len(self.time_samples) > self.n_samples):
+            print("here")
+            self.deleteNsamples()
+
+    def deleteNsamples(self):
+        print("deleted samples")
+        del self.time_samples[:self.n_samples]
+
 
         
         

@@ -3,7 +3,7 @@ import time
 import pyqtgraph as pg
 from visualisation import Window, SensorData
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import QMutex
+from PyQt5.QtCore import QTimer
 import sys
 import threading
 
@@ -37,10 +37,12 @@ def main():
     app_exit = threading.Event()
     app.aboutToQuit.connect(lambda:window.app_exit(app_exit))
     decode = DataDecode(CommunicationWrapper(Serial("COM9", 115200)))
-    time_samples:list[tuple[int,int,int]] = []
+    time_samples:list[list[tuple[int,int,int]]] = []
     sensor_data = SensorData(time_samples)
-
-    window.p1.animate()
+    timer = QTimer()
+    timer.timeout.connect(window.p1.animate)
+    timer.start(10)
+    window.p1.setTimeSamples(time_samples)
 
     serialThread = threading.Thread(target=lambda:read_serial(time_samples,decode,lock,app_exit))
     serialThread.start()
