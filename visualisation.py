@@ -1,5 +1,6 @@
-from data_processing import DataProcessor
+from data_processing import DataProcessor,Axis,SenNum
 from threading import Event
+
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -15,74 +16,76 @@ import pyqtgraph as pg
 import numpy as np
 
 
-class Axes:
-    def __init__(self) -> None:
-        x = 0
-        y = 1
-        z = 2
-
-class QtGraphWrapper:
+class TimeScope:
     def __init__(
         self,
+        which_sen:SenNum,
+        which_axis:Axis,
         data_processor: DataProcessor,
         plt: pg.PlotItem,
         x_label: str,
         y_label: str,
         title: str,
+        #num_frames:int
     ) -> None:
         self.data_processor = data_processor
-        self.time_samples = []
-        """Axes"""
+        self.sen_num = which_sen
+        self.sen_axis = which_axis
         self.x_axis = pg.AxisItem(orientation="bottom")
         self.x_axis.setLabel(x_label)
         self.y_axis = pg.AxisItem(orientation="left")
         self.y_axis.setLabel(y_label)
+        self.t=0
 
-        self.n_samples = 50
+        self.frame = []
+        self.frames = []
 
         """ self.plt = pg.PlotItem(title="tvojeMama",axisItems={"left":self.y_axis,
                                                             "bottom":self.x_axis}) """
         self.plt = plt
+        self.plt.setYRange(-8e7,8e7)
         self.plt.setTitle(title)
         self.plt.setAxisItems({"left": self.y_axis, "bottom": self.x_axis})
 
-    def setNSamples(self, n_samples: int = 50):
-        self.n_samples = n_samples
-
-    def setTimeSamples(self, data: list[list[tuple[int, int, int]]]):
-        self.time_samples = data
-
-    def create_frame(self, sen, axis) -> list:
-        # print(f"samples: {self.time_samples}")
-        # print(f"frame: {[sublist[sen][axis] for sublist in self.time_samples[:self.n_samples]]}")
-        samples = self.data_processor.get_one_sensor_data()
-        return [sublist[sen][axis] for sublist in self.time_samples[: self.n_samples]]
+    def add_data_to_frame(self) ->None:
+        sensor_data = self.data_processor.get_one_sensor_data(self.sen_num)
+        axis_data = self.data_processor.get_one_axis_data(sensor_data,self.sen_axis)
+        self.frame.append(axis_data)
 
     def convert2Np(self, data: list) -> np.ndarray:
         np_array = np.array(data)
         return np_array
 
     def animate(self) -> None:
-        frame = self.convert2Np(data=self.create_frame(0, 0))
-        x_axis = np.linspace(0, self.n_samples, self.n_samples)
-
-        self.plt.plot(x_axis, frame)
-        if len(self.time_samples) > self.n_samples:
-            print("here")
-            self.deleteNsamples()
-
-    def deleteNsamples(self):
-        print("deleted samples")
-        del self.time_samples[: self.n_samples]
+        if len(self.frame) == self.data_processor.n_samples:
+            #print(self.frame)
+            self.plt.clear()
+            y = []
+            n_samples = self.data_processor.n_samples
+            y=self.convert2Np(self.frame)
+            x = np.linspace(self.t,self.t+n_samples,n_samples)
+            self.plt.setXRange(self.t,self.t+self.data_processor.n_samples)
+            self.plt.plot(x,y)
+            self.t+=n_samples
+            self.frame.pop(0)
+        else:
+            pass
+            #print(self.frame)
+            #print("Waiting for frame completation")
+        self.add_data_to_frame()
 
 
 class Window(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(self,
+        data_processor:DataProcessor,        
+        ) -> None:
         super().__init__()
+
+        self.data_processor = data_processor
 
         """Window Properties"""
         self.setWindowTitle("PyQtGraph")
-        self.setGeometry(200, 100, 1920, 1080)
+        self.setGeometry(200, 100, 800, 600)
         pg.setConfigOptions(antialias=True)
 
         widget = QWidget()
@@ -96,7 +99,15 @@ class Window(QMainWindow):
         p1 = win.addPlot(row=0, col=0)
 
         # view = win.addViewBox(row=1, col=0, colspan=2)
-        self.p1 = QtGraphWrapper(p1, "x", "y", "title")
+        self.p1 = TimeScope(
+            SenNum.sen0,
+            Axis.x,
+            self.data_processor,
+            p1,
+            "x",
+            "y",
+            "Title"
+            )
 
         """Menu"""
         menu_layout = QVBoxLayout()
