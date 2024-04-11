@@ -3,6 +3,7 @@ from data_processing import DataProcessor
 from communication import DataDecode, CommunicationWrapper, Serial
 from window import Window
 from app_config import AppConfig
+from style import style
 
 import pyqtgraph as pg
 
@@ -21,6 +22,7 @@ def main():
     data_processor = DataProcessor(serial_thread, AppConfig.N_SAMPLES)
 
     app = QApplication(sys.argv)
+    app.setStyleSheet(style)
     window = Window(data_processor)
     app.aboutToQuit.connect(lambda: window.app_exit(app_exit))
     # timer = QTimer()
