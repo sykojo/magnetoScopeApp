@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QGraphicsWidget,
     QGraphicsItem,
     QHBoxLayout,
+    QLabel
 )
 
 import pyqtgraph as pg
@@ -46,14 +47,19 @@ class Window(QMainWindow):
         # self.display_time_scopes3()
 
         """Buttons"""
-        but1 = QPushButton(text="joeMama")
-        but2 = QPushButton(text="daineMutter")
+        but1 = QPushButton(text="Time Measurment")
+        but2 = QPushButton(text="Space Measurment")
         but1.clicked.connect(self.display_time_scopes3)
         but2.clicked.connect(self.display_space_scopes)
 
+        """Info labels"""
+        status_label = QLabel("")
+
         """Menu"""
-        menu_widget.layout.addWidget(but1)
-        menu_widget.layout.addWidget(but2)
+        menu_widget.layout.addWidget(but1,0,0)
+        menu_widget.layout.addWidget(but2,1,0)
+        menu_widget.layout.addWidget(status_label,2,0)
+        
 
         """Window Layout"""
         self.window_layout.addWidget(menu_widget.get_menu_widget())
@@ -64,13 +70,13 @@ class Window(QMainWindow):
     def app_exit(self, exit: Event):
         exit.set()
 
-    def display_time_scopes3(self):
+    def display_time_scopes3(self)-> None:
         self.plt_timer.stop()
         self.active_scopes = []
         self.plot_container.clear()
-        ts_x = TimeScope(0, Axis.x, self.data_processor, "t", "B", "X Axis")
-        ts_y = TimeScope(0, Axis.y, self.data_processor, "t", "B", "Y Axis")
-        ts_z = TimeScope(0, Axis.z, self.data_processor, "t", "B", "Z Axis")
+        ts_x = TimeScope(7, Axis.x, self.data_processor, "sample", "B", "X Axis")
+        ts_y = TimeScope(7, Axis.y, self.data_processor, "sample", "B", "Y Axis")
+        ts_z = TimeScope(7, Axis.z, self.data_processor, "sample", "B", "Z Axis")
         self.active_scopes.append(ts_x)
         self.active_scopes.append(ts_y)
         self.active_scopes.append(ts_z)
@@ -82,13 +88,13 @@ class Window(QMainWindow):
         )
         self.plt_timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
 
-    def display_space_scopes(self):
+    def display_space_scopes(self) -> None: 
         self.plt_timer.stop()
         self.active_scopes = []
         self.plot_container.clear()
-        ss_x = SpaceScope(Axis.x, "x", "nT", "X Axis", self.data_processor)
-        ss_y = SpaceScope(Axis.y, "y", "nT", "Y Axis", self.data_processor)
-        ss_z = SpaceScope(Axis.z, "z", "nT", "Z Axis", self.data_processor)
+        ss_x = SpaceScope(Axis.x, "x", "B", "X Axis", self.data_processor)
+        ss_y = SpaceScope(Axis.y, "y", "B", "Y Axis", self.data_processor)
+        ss_z = SpaceScope(Axis.z, "z", "B", "Z Axis", self.data_processor)
         self.active_scopes.append(ss_x)
         self.active_scopes.append(ss_y)
         self.active_scopes.append(ss_z)
@@ -101,27 +107,32 @@ class Window(QMainWindow):
         )
         self.plt_timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
 
-    def animateTimeScope(self, scopes: list[TimeScope]):
+    def animateTimeScope(self, scopes: list[TimeScope])-> None:
         for scope in scopes:
             if len(scope.frame) == self.data_processor.n_samples:
                 scope.plt_item.clear()
                 y = []
+                x = []
                 n_samples = self.data_processor.n_samples
                 y = scope.convert2Np(scope.frame)
+                y = y/1000000.0
                 x = np.linspace(scope.t, scope.t + n_samples, n_samples)
                 scope.plt_item.setXRange(scope.t, scope.t + n_samples)
-                scope.plt_item.plot(x, y)
+                scope.plt_item.plot(x, y,pen=(0,250,154))
                 scope.t += n_samples
                 scope.frame.pop(0)
             scope.add_data_to_frame()
         self.data_processor.set_current_sample()
 
-    def animateSpaceScope(self, scopes: list[SpaceScope]):
+    def animateSpaceScope(self, scopes: list[SpaceScope])-> None:
         for scope in scopes:
             scope.plt_item.clear()
+            x = []
+            y = []
             x = np.linspace(0, AppConfig.N_SENSORS - 1, AppConfig.N_SENSORS)
             y = scope.convert2Np(scope.frame)
-            scope.plt_item.plot(x, y)
+            y = y/1000000.0
+            scope.plt_item.plot(x, y,pen=(0,250,154), symbolBrush=(0,255,0), symbolPen='w')
             scope.frame = []
             scope.add_data_to_frame()
         self.data_processor.set_current_sample()
@@ -131,8 +142,8 @@ class MenuWidgetWrapper:
     def __init__(self, data_processor) -> None:
         self.data_processor = data_processor
         self.menu = QWidget()
-        self.layout = QVBoxLayout()
+        self.layout = QGridLayout()
         self.menu.setLayout(self.layout)
 
-    def get_menu_widget(self):
+    def get_menu_widget(self)->QWidget:
         return self.menu
