@@ -19,14 +19,15 @@ class SpaceScope:
         self.sen_axis = which_axis
         self.data_processor = data_processor
         self.x_axis = pg.AxisItem(orientation="bottom")
-        self.x_axis.setLabel(x_label)
+        self.x_axis.setLabel(x_label,"senNum")
         self.y_axis = pg.AxisItem(orientation="left")
-        self.y_axis.setLabel(y_label)
+        self.y_axis.setLabel(y_label,"mT")
 
-        self.plt_item = pg.PlotItem()
-        self.plt_item.setYRange(-8e7, 8e7)
+        self.plt_item = pg.PlotItem(axisItems={"left": self.y_axis, "bottom": self.x_axis})
+        self.plt_item.setYRange(-80, 80)
         self.plt_item.setTitle(title)
 
+        self.frame = []
         self.frame = self._init_frame()
 
     def get_plt_item(self) -> pg.PlotItem:
@@ -66,19 +67,20 @@ class TimeScope:
         self.sen_num = which_sen
         self.sen_axis = which_axis
         self.x_axis = pg.AxisItem(orientation="bottom")
-        self.x_axis.setLabel(x_label)
+        self.x_axis.setLabel(x_label,units="N")
         self.y_axis = pg.AxisItem(orientation="left")
-        self.y_axis.setLabel(y_label)
+        self.y_axis.setLabel(y_label,units="mT")
         self.t = 0
 
+        self.frame = []
         self.frame = self._init_frame()
 
         """ self.plt = pg.PlotItem(title="tvojeMama",axisItems={"left":self.y_axis,
                                                             "bottom":self.x_axis}) """
-        self.plt_item = pg.PlotItem()
-        self.plt_item.setYRange(-8e7, 8e7)
+        self.plt_item = pg.PlotItem(axisItems={"left": self.y_axis, "bottom": self.x_axis})
+        self.plt_item.setYRange(-80, 80)
         self.plt_item.setTitle(title)
-        # self.plt.setAxisItems({"left": self.y_axis, "bottom": self.x_axis})
+        #self.plt_item.setAxisItems()
 
     def get_plt_item(self) -> pg.PlotItem:
         return self.plt_item
@@ -98,17 +100,3 @@ class TimeScope:
         np_array = np.array(data)
         return np_array
 
-    def animate(self) -> None:
-        if len(self.frame) == self.data_processor.n_samples:
-            self.plt_item.clear()
-            y = []
-            n_samples = self.data_processor.n_samples
-            y = self.convert2Np(self.frame)
-            x = np.linspace(self.t, self.t + n_samples, n_samples)
-            self.plt_item.setXRange(self.t, self.t + n_samples)
-            self.plt_item.plot(x, y)
-            self.t += n_samples
-            self.frame.pop(0)
-
-        self.data_processor.set_current_sample()
-        self.add_data_to_frame()
