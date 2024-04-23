@@ -53,14 +53,13 @@ class Window(QMainWindow):
         but2.clicked.connect(self.display_space_scopes)
 
         """Info labels"""
-        status_label = QLabel("")
+        status_label = QLabel("Hello There")
 
         """Menu"""
         menu_widget.layout.addWidget(but1,0,0)
         menu_widget.layout.addWidget(but2,1,0)
         menu_widget.layout.addWidget(status_label,2,0)
         
-
         """Window Layout"""
         self.window_layout.addWidget(menu_widget.get_menu_widget())
         self.window_layout.addWidget(self.plot_container)
@@ -83,6 +82,11 @@ class Window(QMainWindow):
         self.plot_container.addItem(ts_x.get_plt_item(), 0, 0)
         self.plot_container.addItem(ts_y.get_plt_item(), 1, 0)
         self.plot_container.addItem(ts_z.get_plt_item(), 2, 0)
+        
+        try:
+            self.plt_timer.timeout.disconnect()
+        except:
+            pass
         self.plt_timer.timeout.connect(
             lambda: self.animateTimeScope(self.active_scopes)
         )
@@ -102,6 +106,10 @@ class Window(QMainWindow):
         self.plot_container.addItem(ss_y.get_plt_item(), 1, 0)
         self.plot_container.addItem(ss_z.get_plt_item(), 2, 0)
 
+        try:
+            self.plt_timer.timeout.disconnect()
+        except:
+            pass
         self.plt_timer.timeout.connect(
             lambda: self.animateSpaceScope(self.active_scopes)
         )
