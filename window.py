@@ -21,6 +21,7 @@ import pyqtgraph as pg
 from threading import Event
 import numpy as np
 
+x = 0
 
 class Window(QMainWindow):
     def __init__(
@@ -56,21 +57,19 @@ class Window(QMainWindow):
         self.start_stop_button.setIcon(QIcon("icons/start_button_icon.png"))
         self.start_stop_button.clicked.connect(self.toggle_timer)
 
-        """Info labels"""
-        max_title_label = QLabel("Max")
-        self.max_labels:list[QLabel] = [QLabel("X: - "),
-                                       QLabel("Y: - "),
-                                       QLabel("Z: - ")]
-        
+        max_label = InfoLabels("MAX")
+        self.label_timer = QTimer()
+        self.label_timer.timeout.connect(lambda:max_label.animate())
+        self.label_timer.start(10)
+
         """Menu"""
         menu_widget.layout.addWidget(but1)
         menu_widget.layout.addWidget(but2)
-        menu_widget.layout.addWidget(max_title_label)
-        for label in self.max_labels:
-            menu_widget.layout.addWidget(label)
+        menu_widget.layout.addWidget(InfoLabels("MAX").labels_container)
+        menu_widget.layout.addWidget(InfoLabels("MIN").labels_container)
+        menu_widget.layout.addWidget(self.start_stop_button)
         
         """Window Layout"""
-        menu_widget.layout.addWidget(self.start_stop_button)
         self.window_layout.addWidget(menu_widget.get_menu_widget())
         self.window_layout.addWidget(self.plot_container)
 
@@ -78,7 +77,7 @@ class Window(QMainWindow):
 
     def app_exit(self, exit: Event):
         exit.set()
-
+        
     def animateTimeScope(self, scopes: list[TimeScope])-> None:
         for scope in scopes:
             if len(scope.frame) == self.data_processor.n_samples:
@@ -134,9 +133,57 @@ class MenuWidgetWrapper:
     def get_menu_widget(self)->QWidget:
         return self.menu
     
+class InfoLabels:
+    def __init__(self,which_info:str) -> None:
+        self.labels_container = QWidget()
+        self.labels_container_layout = QVBoxLayout()
+        self.labels_container_layout.addWidget(QLabel(which_info))
+        self.labels_container.setLayout(self.labels_container_layout)
+        self.axes:list[QLabel] = []
+        self.values:list[QLabel] = []
+        
+        for axis in Axis:
+            new_axis = self.create_axis(axis)
+            new_value = self.create_new_value("-")
+            self.axes.append(new_axis)
+            self.values.append(new_value)
+            container = self.create_label_container(new_axis,new_value)
+            self.labels_container_layout.addWidget(container)
+    
+        self.label_timer = QTimer()
+        self.label_timer.timeout.connect(lambda:self.animate())
+        self.label_timer.start(100)
+        
+    def create_axis(self,which_axis:Axis)->QLabel:
+        return QLabel(which_axis.as_string())
+
+    def create_label_container(self,axis:QLabel,value:QLabel)->QWidget:
+        label_container = QWidget()
+        label_container_layout = QHBoxLayout()
+        label_container.setLayout(label_container_layout)
+        
+        label_container_layout.addWidget(axis)
+        label_container_layout.addWidget(value)
+        return label_container
+
+    def create_new_value(self,value:int | str)->QLabel:
+        if type(value) == int:
+            return QLabel(str(value))
+        elif type(value) == str:
+            return(QLabel(value))
+        else:
+            return QLabel("Invalid Type")
+
+    def set_value(self,which_axis:Axis,value:int)->None:
+        self.values[which_axis.value].setText(str(value))  
+
+    def animate(self):
+        pass
+
 
 class TimeView:
     def __init__(self,window:Window) -> None:
+        self.window = window
         window.start_stop_button.setText("Stop")
         window.plt_timer.stop()
         self.active_scopes = []
@@ -158,6 +205,9 @@ class TimeView:
             lambda: window.animateTimeScope(self.active_scopes)
         )
         window.plt_timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
+
+    def set_max(self, which_axis):
+        pass
 
 
 class SpaceView:
