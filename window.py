@@ -57,21 +57,20 @@ class Window(QMainWindow):
         self.start_stop_button.clicked.connect(self.toggle_timer)
 
         """Info labels"""
-        status_label = QLabel("Hello There")
-        self.max_label = QLabel("Max: - ")
-        self.min_label = QLabel("Min: - ")
-        self.average_label = QLabel("Average: - ")
-
+        max_title_label = QLabel("Max")
+        self.max_labels:list[QLabel] = [QLabel("X: - "),
+                                       QLabel("Y: - "),
+                                       QLabel("Z: - ")]
+        
         """Menu"""
         menu_widget.layout.addWidget(but1)
         menu_widget.layout.addWidget(but2)
-        menu_widget.layout.addWidget(status_label)
-        menu_widget.layout.addWidget(self.max_label)
-        menu_widget.layout.addWidget(self.min_label)
-        menu_widget.layout.addWidget(self.average_label)
-        menu_widget.layout.addWidget(self.start_stop_button)
+        menu_widget.layout.addWidget(max_title_label)
+        for label in self.max_labels:
+            menu_widget.layout.addWidget(label)
         
         """Window Layout"""
+        menu_widget.layout.addWidget(self.start_stop_button)
         self.window_layout.addWidget(menu_widget.get_menu_widget())
         self.window_layout.addWidget(self.plot_container)
 
@@ -79,54 +78,6 @@ class Window(QMainWindow):
 
     def app_exit(self, exit: Event):
         exit.set()
-
-    def display_time_scopes3(self)-> None:
-        self.start_stop_button.setText("Stop")
-        self.plt_timer.stop()
-        self.active_scopes = []
-        self.plot_container.clear()
-        ts_x = TimeScope(7, Axis.x, self.data_processor, "sample", "B", "X Axis")
-        ts_y = TimeScope(7, Axis.y, self.data_processor, "sample", "B", "Y Axis")
-        ts_z = TimeScope(7, Axis.z, self.data_processor, "sample", "B", "Z Axis")
-        self.active_scopes.append(ts_x)
-        self.active_scopes.append(ts_y)
-        self.active_scopes.append(ts_z)
-        self.plot_container.addItem(ts_x.get_plt_item(), 0, 0)
-        self.plot_container.addItem(ts_y.get_plt_item(), 1, 0)
-        self.plot_container.addItem(ts_z.get_plt_item(), 2, 0)
-        
-        try:
-            self.plt_timer.timeout.disconnect()
-        except:
-            pass
-        self.plt_timer.timeout.connect(
-            lambda: self.animateTimeScope(self.active_scopes)
-        )
-        self.plt_timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
-
-    def display_space_scopes(self) -> None: 
-        self.start_stop_button.setText("Stop")
-        self.plt_timer.stop()
-        self.active_scopes = []
-        self.plot_container.clear()
-        ss_x = SpaceScope(Axis.x, "x", "B", "X Axis", self.data_processor)
-        ss_y = SpaceScope(Axis.y, "y", "B", "Y Axis", self.data_processor)
-        ss_z = SpaceScope(Axis.z, "z", "B", "Z Axis", self.data_processor)
-        self.active_scopes.append(ss_x)
-        self.active_scopes.append(ss_y)
-        self.active_scopes.append(ss_z)
-        self.plot_container.addItem(ss_x.get_plt_item(), 0, 0)
-        self.plot_container.addItem(ss_y.get_plt_item(), 1, 0)
-        self.plot_container.addItem(ss_z.get_plt_item(), 2, 0)
-
-        try:
-            self.plt_timer.timeout.disconnect()
-        except:
-            pass
-        self.plt_timer.timeout.connect(
-            lambda: self.animateSpaceScope(self.active_scopes)
-        )
-        self.plt_timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
 
     def animateTimeScope(self, scopes: list[TimeScope])-> None:
         for scope in scopes:
@@ -167,7 +118,7 @@ class Window(QMainWindow):
             self.plt_timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)  
             self.start_stop_button.setText('Stop')
             
-    def set_max(self,new_max:int):
+    def set_max_time_scope(self,new_max:int):
         pass
 
     def set_average(self,nes_average:int):
@@ -182,3 +133,53 @@ class MenuWidgetWrapper:
 
     def get_menu_widget(self)->QWidget:
         return self.menu
+    
+
+class TimeView:
+    def __init__(self,window:Window) -> None:
+        window.start_stop_button.setText("Stop")
+        window.plt_timer.stop()
+        self.active_scopes = []
+        window.plot_container.clear()
+        ts_x = TimeScope(7, Axis.x, window.data_processor, "sample", "B", "X Axis")
+        ts_y = TimeScope(7, Axis.y, window.data_processor, "sample", "B", "Y Axis")
+        ts_z = TimeScope(7, Axis.z, window.data_processor, "sample", "B", "Z Axis")
+        self.active_scopes.append(ts_x)
+        self.active_scopes.append(ts_y)
+        self.active_scopes.append(ts_z)
+        window.plot_container.addItem(ts_x.get_plt_item(), 0, 0)
+        window.plot_container.addItem(ts_y.get_plt_item(), 1, 0)
+        window.plot_container.addItem(ts_z.get_plt_item(), 2, 0)
+        try:
+            window.plt_timer.timeout.disconnect()
+        except:
+            pass
+        window.plt_timer.timeout.connect(
+            lambda: window.animateTimeScope(self.active_scopes)
+        )
+        window.plt_timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
+
+
+class SpaceView:
+    def __init__(self,window) -> None:
+        window.start_stop_button.setText("Stop")
+        window.plt_timer.stop()
+        window.active_scopes = []
+        window.plot_container.clear()
+        ss_x = SpaceScope(Axis.x, "x", "B", "X Axis", window.data_processor)
+        ss_y = SpaceScope(Axis.y, "y", "B", "Y Axis", window.data_processor)
+        ss_z = SpaceScope(Axis.z, "z", "B", "Z Axis", window.data_processor)
+        window.active_scopes.append(ss_x)
+        window.active_scopes.append(ss_y)
+        window.active_scopes.append(ss_z)
+        window.plot_container.addItem(ss_x.get_plt_item(), 0, 0)
+        window.plot_container.addItem(ss_y.get_plt_item(), 1, 0)
+        window.plot_container.addItem(ss_z.get_plt_item(), 2, 0)
+        try:
+            window.plt_timer.timeout.disconnect()
+        except:
+            pass
+        window.plt_timer.timeout.connect(
+            lambda: window.animateSpaceScope(window.active_scopes)
+        )
+        window.plt_timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
