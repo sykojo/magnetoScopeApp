@@ -50,8 +50,8 @@ class Window(QMainWindow):
         """Buttons"""
         but1 = QPushButton(text="Time Measurment")
         but2 = QPushButton(text="Space Measurment")
-        but1.clicked.connect(self.display_time_scopes3)
-        but2.clicked.connect(self.display_space_scopes)
+        but1.clicked.connect(lambda:TimeView(self))
+        but2.clicked.connect(lambda:SpaceView(self))
         self.start_stop_button = QPushButton(text="Start")
         self.start_stop_button.setIcon(QIcon("icons/start_button_icon.png"))
         self.start_stop_button.clicked.connect(self.toggle_timer)
