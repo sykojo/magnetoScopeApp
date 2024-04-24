@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel
 )
+from PySide6.QtGui import QIcon
 
 import pyqtgraph as pg
 from threading import Event
@@ -51,14 +52,24 @@ class Window(QMainWindow):
         but2 = QPushButton(text="Space Measurment")
         but1.clicked.connect(self.display_time_scopes3)
         but2.clicked.connect(self.display_space_scopes)
+        self.start_stop_button = QPushButton(text="Start")
+        self.start_stop_button.setIcon(QIcon("icons/start_button_icon.png"))
+        self.start_stop_button.clicked.connect(self.toggle_timer)
 
         """Info labels"""
         status_label = QLabel("Hello There")
+        self.max_label = QLabel("Max: - ")
+        self.min_label = QLabel("Min: - ")
+        self.average_label = QLabel("Average: - ")
 
         """Menu"""
-        menu_widget.layout.addWidget(but1,0,0)
-        menu_widget.layout.addWidget(but2,1,0)
-        menu_widget.layout.addWidget(status_label,2,0)
+        menu_widget.layout.addWidget(but1)
+        menu_widget.layout.addWidget(but2)
+        menu_widget.layout.addWidget(status_label)
+        menu_widget.layout.addWidget(self.max_label)
+        menu_widget.layout.addWidget(self.min_label)
+        menu_widget.layout.addWidget(self.average_label)
+        menu_widget.layout.addWidget(self.start_stop_button)
         
         """Window Layout"""
         self.window_layout.addWidget(menu_widget.get_menu_widget())
@@ -70,6 +81,7 @@ class Window(QMainWindow):
         exit.set()
 
     def display_time_scopes3(self)-> None:
+        self.start_stop_button.setText("Stop")
         self.plt_timer.stop()
         self.active_scopes = []
         self.plot_container.clear()
@@ -93,6 +105,7 @@ class Window(QMainWindow):
         self.plt_timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
 
     def display_space_scopes(self) -> None: 
+        self.start_stop_button.setText("Stop")
         self.plt_timer.stop()
         self.active_scopes = []
         self.plot_container.clear()
@@ -145,12 +158,26 @@ class Window(QMainWindow):
             scope.add_data_to_frame()
         self.data_processor.set_current_sample()
 
+    def toggle_timer(self):
+        if self.plt_timer.isActive():
+            self.plt_timer.stop()
+            self.start_stop_button.setText('Start')
+            
+        else:
+            self.plt_timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)  
+            self.start_stop_button.setText('Stop')
+            
+    def set_max(self,new_max:int):
+        pass
+
+    def set_average(self,nes_average:int):
+        pass
 
 class MenuWidgetWrapper:
     def __init__(self, data_processor) -> None:
         self.data_processor = data_processor
         self.menu = QWidget()
-        self.layout = QGridLayout()
+        self.layout = QVBoxLayout()
         self.menu.setLayout(self.layout)
 
     def get_menu_widget(self)->QWidget:
