@@ -129,6 +129,7 @@ class TimeView(Timer):
 
     def create_scopes(self):
         self.timer.stop()
+        self.active_scopes = []
         self.window.plot_container.clear()
         ts_x = TimeScope(self.current_sensor, Axis.x, self.window.data_processor, "sample", "B", "X Axis")
         ts_y = TimeScope(self.current_sensor, Axis.y, self.window.data_processor, "sample", "B", "Y Axis")
@@ -234,7 +235,7 @@ class InfoLabels:
             return QLabel("Invalid Type")
 
     def set_value(self,which_axis:Axis,value:int)->None:
-        self.values_labels[which_axis.value].setText(f"{value} nT")  
+        self.values_labels[which_axis.value].setText(f"{value} mT")  
 
 
 
