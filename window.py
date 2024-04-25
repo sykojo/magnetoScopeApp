@@ -79,7 +79,6 @@ class Window(QMainWindow):
             y = []
             x = np.linspace(0, AppConfig.N_SENSORS - 1, AppConfig.N_SENSORS)
             y = scope.convert2Np(scope.frame)
-            y = y/1000000.0
             scope.plt_item.plot(x, y,pen=(0,250,154), symbolBrush=(0,255,0), symbolPen='w')
             scope.frame = []
             scope.add_data_to_frame()
@@ -161,7 +160,6 @@ class TimeView(Timer):
                 x = []
                 n_samples = self.window.data_processor.n_samples
                 y = scope.convert2Np(scope.frame)
-                y = y/1000000.0
                 x = np.linspace(scope.t, scope.t + n_samples, n_samples)
                 scope.plt_item.setXRange(scope.t, scope.t + n_samples)
                 scope.plt_item.plot(x, y,pen=(0,250,154))
