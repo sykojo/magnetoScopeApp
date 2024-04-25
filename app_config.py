@@ -6,12 +6,23 @@ class AppConfig:
     PLOT_TIMER_SLEEP_MS = 20
     N_SAMPLES = 500
     N_SENSORS = 8
+    N_AXES = 3
 
 
 class Axis(Enum):
     x = 0
     y = 1
     z = 2
+    def as_string(self)->str:
+        if self == Axis.x:
+            return "X"
+        elif self == Axis.y:
+            return "Y"
+        elif self == Axis.z:
+            return "Z"
+        else:
+            return "UnknownAxe"
+
 
 
 """ class SenNum(Enum):

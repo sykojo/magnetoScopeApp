@@ -39,7 +39,7 @@ class DataDecode:
         last = 0
         for i in range(4, len(raw_data) + 1, 4):
             temp_tuple.append(
-                int.from_bytes(raw_data[last:i], byteorder="little", signed=True)
+                int.from_bytes(raw_data[last:i], byteorder="little", signed=True)/1000000            # <----conversion to mT here!
             )
             if i % 3 == 0:
                 result.append(tuple(temp_tuple))
