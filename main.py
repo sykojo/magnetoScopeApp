@@ -19,7 +19,7 @@ def main():
     app_exit = threading.Event()
     decode = DataDecode(CommunicationWrapper(Serial("COM9", 921600)))
     serial_thread = SerialThread(decode, app_exit)
-    data_processor = DataProcessor(serial_thread, AppConfig.N_SAMPLES)
+    data_processor = DataProcessor(serial_thread, AppConfig.N_SAMPLES,AppConfig.N_SENSORS)
 
     app = QApplication(sys.argv)
     app.setStyleSheet(style)

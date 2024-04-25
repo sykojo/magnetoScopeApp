@@ -27,17 +27,11 @@ class SpaceScope:
         self.plt_item.setYRange(-80, 80)
         self.plt_item.setTitle(title)
 
-        self.frame = []
-        self.frame = self._init_frame()
+        self.frame:list[int] = [0]*AppConfig.N_SENSORS
 
     def get_plt_item(self) -> pg.PlotItem:
         return self.plt_item
 
-    def _init_frame(self) -> list:
-        frame = []
-        for i in range(AppConfig.N_SENSORS):
-            frame.append(0)
-        return frame
 
     def convert2Np(self, data: list) -> np.ndarray:
         np_array = np.array(data)
@@ -45,8 +39,8 @@ class SpaceScope:
 
     def add_data_to_frame(self) -> None:
         for i in range(0, AppConfig.N_SENSORS, 1):
-            sensor_data = self.data_processor.get_one_sensor_data(i)
-            axis_data = self.data_processor.get_one_axis_data(
+            sensor_data = self.data_processor.get_one_sensor_raw_data(i)
+            axis_data = self.data_processor.get_one_axis_raw_data(
                 sensor_data, self.sen_axis
             )
             self.frame.append(axis_data)
@@ -72,8 +66,7 @@ class TimeScope:
         self.y_axis.setLabel(y_label,units="mT")
         self.t = 0
 
-        self.frame = []
-        self.frame = self._init_frame()
+        self.frame:list[int] = [0]*self.data_processor.n_samples
 
         """ self.plt = pg.PlotItem(title="tvojeMama",axisItems={"left":self.y_axis,
                                                             "bottom":self.x_axis}) """
@@ -86,15 +79,9 @@ class TimeScope:
         return self.plt_item
 
     def add_data_to_frame(self) -> None:
-        sensor_data = self.data_processor.get_one_sensor_data(self.sen_num)
-        axis_data = self.data_processor.get_one_axis_data(sensor_data, self.sen_axis)
+        sensor_data:tuple[int,int,int] = self.data_processor.get_one_sensor_raw_data(self.sen_num)
+        axis_data:int = self.data_processor.get_one_axis_raw_data(sensor_data, self.sen_axis)
         self.frame.append(axis_data)
-
-    def _init_frame(self) -> list:
-        frame = []
-        for i in range(self.data_processor.n_samples):
-            frame.append(0)
-        return frame
 
     def convert2Np(self, data: list) -> np.ndarray:
         np_array = np.array(data)
