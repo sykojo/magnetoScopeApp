@@ -20,6 +20,7 @@ from PySide6.QtGui import QIcon
 import pyqtgraph as pg
 from threading import Event
 import numpy as np
+from abc import ABC,abstractmethod
 
 class Window(QMainWindow):
     def __init__(
@@ -31,8 +32,6 @@ class Window(QMainWindow):
         self.window_layout = QHBoxLayout()
         self.mainWindow = QWidget()
         self.mainWindow.setLayout(self.window_layout)
-        self.active_scopes = []
-        self.active_timers = []
         """Window Properties"""
         self.setWindowTitle("MagnetoScope")
         self.setGeometry(200, 100, 800, 600)
@@ -49,9 +48,10 @@ class Window(QMainWindow):
         self.start_stop_button = QPushButton(text="Start")
         self.start_stop_button.setIcon(QIcon("icons/start_button_icon.png"))
         
-        self.time_view = TimeView(self)
+        self.time_view = TimeView(self,AppConfig.ACTIVE_SEN)
+        self.space_view = SpaceView(self)
         but1.clicked.connect(lambda:self.time_view.create_scopes())
-        but2.clicked.connect(lambda:SpaceView(self))
+        but2.clicked.connect(lambda:self.space_view.create_scopes())
 
         """Menu"""
         self.menu_widget.layout.addWidget(but1)
@@ -68,21 +68,6 @@ class Window(QMainWindow):
     def app_exit(self, exit: Event):
         exit.set()
 
-    """ def switch_view(self,view:TimeView|SpaceView):
-        pass """
-
-        
-    def animateSpaceScope(self, scopes: list[SpaceScope])-> None:
-        for scope in scopes:
-            scope.plt_item.clear()
-            x = []
-            y = []
-            x = np.linspace(0, AppConfig.N_SENSORS - 1, AppConfig.N_SENSORS)
-            y = scope.convert2Np(scope.frame)
-            scope.plt_item.plot(x, y,pen=(0,250,154), symbolBrush=(0,255,0), symbolPen='w')
-            scope.frame = []
-            scope.add_data_to_frame()
-        self.data_processor.load_new_sample()
             
 
 class MenuWidgetWrapper:
@@ -116,15 +101,34 @@ class Timer:
             pass
         self.window.start_stop_button.clicked.connect(self.toggle_timer)
 
-class TimeView(Timer):
-    def __init__(self,window:Window) -> None:
-        Timer.__init__(self,window)
+class View(Timer,ABC):
+    def __init__(self, window: Window) -> None:
+        super().__init__(window)
         self.window = window
-        self.current_sensor:int = 7
         window.start_stop_button.setText("Stop")
         self.active_scopes = []
+
+    @abstractmethod
+    def create_scopes(self):
+        pass
+    
+    @abstractmethod
+    def display_max(self):
+        pass
+
+    @abstractmethod
+    def display_scopes(self,scopes:list):
+        pass
+        
+    def animate(self,scopes:list):
+        self.display_max()
+        self.display_scopes(self.active_scopes)
+
+class TimeView(View):
+    def __init__(self,window,sen_n) -> None:
+        super().__init__(window)
+        self.current_sensor:int = sen_n
         self.info_labels = InfoLabels(self,"MAX")
-        #self.create_scopes()
 
     def create_scopes(self):
         self.timer.stop()
@@ -147,12 +151,13 @@ class TimeView(Timer):
             lambda: self.animate(self.active_scopes)
         )
         self.timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
-
-    def animate(self, scopes: list[TimeScope])-> None:
+  
+    def display_max(self):
         for axis in Axis:
             max_value = self.window.data_processor.get_max(self.current_sensor,axis)
             self.info_labels.set_value(axis,max_value)
-            
+    
+    def display_scopes(self,scopes:list[TimeScope]):
         for scope in scopes:
             if len(scope.frame) == self.window.data_processor.n_samples:
                 scope.plt_item.clear()
@@ -167,31 +172,52 @@ class TimeView(Timer):
                 scope.frame.pop(0)
             scope.add_data_to_frame()
         self.window.data_processor.load_new_sample()
+        
 
-class SpaceView:
+class SpaceView(View):
     def __init__(self,window) -> None:
-        self.window = window
-        window.start_stop_button.setText("Stop")
-        window.plt_timer.stop()
-        window.active_scopes = []
-        window.plot_container.clear()
-        ss_x = SpaceScope(Axis.x, "x", "B", "X Axis", window.data_processor)
-        ss_y = SpaceScope(Axis.y, "y", "B", "Y Axis", window.data_processor)
-        ss_z = SpaceScope(Axis.z, "z", "B", "Z Axis", window.data_processor)
-        window.active_scopes.append(ss_x)
-        window.active_scopes.append(ss_y)
-        window.active_scopes.append(ss_z)
-        window.plot_container.addItem(ss_x.get_plt_item(), 0, 0)
-        window.plot_container.addItem(ss_y.get_plt_item(), 1, 0)
-        window.plot_container.addItem(ss_z.get_plt_item(), 2, 0)
+        super().__init__(window)
+        self.info_labels = InfoLabels(self,"MAX")
+
+    def create_scopes(self):
+        self.timer.stop()
+        self.active_scopes = []
+        self.window.plot_container.clear()
+        ss_x = SpaceScope(Axis.x, "x", "B", "X Axis", self.window.data_processor)
+        ss_y = SpaceScope(Axis.y, "y", "B", "Y Axis", self.window.data_processor)
+        ss_z = SpaceScope(Axis.z, "z", "B", "Z Axis", self.window.data_processor)
+        self.active_scopes.append(ss_x)
+        self.active_scopes.append(ss_y)
+        self.active_scopes.append(ss_z)
+        self.window.plot_container.addItem(ss_x.get_plt_item(), 0, 0)
+        self.window.plot_container.addItem(ss_y.get_plt_item(), 1, 0)
+        self.window.plot_container.addItem(ss_z.get_plt_item(), 2, 0)
         try:
-            window.plt_timer.timeout.disconnect()
+            self.timer.timeout.disconnect()
         except:
             pass
-        window.plt_timer.timeout.connect(
-            lambda: window.animateSpaceScope(window.active_scopes)
+        self.timer.timeout.connect(
+            lambda: self.animate(self.active_scopes)
         )
-        window.plt_timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
+        self.timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
+
+    def display_max(self):
+        for axis in Axis:
+            max_values = self.window.data_processor.get_max_of_all_sen()
+            for value in max_values:
+                self.info_labels.set_value(axis,value)
+
+    def display_scopes(self, scopes: list[SpaceScope]):
+        for scope in scopes:
+            scope.plt_item.clear()
+            x = []
+            y = []
+            x = np.linspace(0, AppConfig.N_SENSORS - 1, AppConfig.N_SENSORS)
+            y = scope.convert2Np(scope.frame)
+            scope.plt_item.plot(x, y,pen=(0,250,154), symbolBrush=(0,255,0), symbolPen='w')
+            scope.frame = []
+            scope.add_data_to_frame()
+        self.window.data_processor.load_new_sample()
 
 
 class InfoLabels:

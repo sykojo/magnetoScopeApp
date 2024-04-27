@@ -58,7 +58,7 @@ class DataProcessor:
         return self._max_values[which_sen][which_axis.value]
         
     def get_max_of_all_sen(self) -> list[int]:
-        max_xyz:list[int] = [int(float('-inf')),int(float('-inf')),int(float('-inf'))]
+        max_xyz:list[int] = [int(1e-9),int(1e-9),int(1e-9)]
         for sen_adr in range(self.n_sensors):
             for axis in Axis:
                 if self._max_values[sen_adr][axis.value] > max_xyz[axis.value]:
