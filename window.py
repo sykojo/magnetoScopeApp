@@ -43,6 +43,8 @@ class Window(QMainWindow):
         """Containers"""
         self.menu_widget = MenuWidgetWrapper(self)
         self.plot_container = pg.GraphicsLayoutWidget()
+        self.plot_container.setAntialiasing(True)
+        self.plot_container.setBackground("w")
 
         """Buttons"""
         but1 = QPushButton(text="Time Measurment")
@@ -237,7 +239,7 @@ class TimeView(View):
                 y = scope.convert2Np(scope.frame)
                 x = np.linspace(scope.t, scope.t + n_samples, n_samples)
                 scope.plt_item.setXRange(scope.t, scope.t + n_samples)
-                scope.plt_item.plot(x, y,pen=pg.mkPen((61,142,201), width=4)) #3d8ec9
+                scope.plt_item.plot(x, y,pen=(61,142,201))
                 scope.t += n_samples
                 scope.frame.pop(0)
             scope.add_data_to_frame()
