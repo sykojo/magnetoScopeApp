@@ -7,6 +7,9 @@ class AppConfig:
     N_SAMPLES = 500
     N_SENSORS = 8
     N_AXES = 3
+    ACTIVE_SEN = 7
+    SPACE_VIEW = "SpaceView"
+    TIME_VIEW = "TimeView"
 
 
 class Axis(Enum):

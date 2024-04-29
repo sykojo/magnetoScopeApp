@@ -31,6 +31,9 @@ class Window(QMainWindow):
         self.data_processor = data_processor
         self.window_layout = QHBoxLayout()
         self.mainWindow = QWidget()
+        self.plot_view = QWidget()
+        self.plot_view_layout = QHBoxLayout()
+        self.plot_view.setLayout(self.plot_view_layout)
         self.mainWindow.setLayout(self.window_layout)
         """Window Properties"""
         self.setWindowTitle("MagnetoScope")
@@ -41,123 +44,190 @@ class Window(QMainWindow):
         self.menu_widget = MenuWidgetWrapper(self)
         self.plot_container = pg.GraphicsLayoutWidget()
 
-
         """Buttons"""
         but1 = QPushButton(text="Time Measurment")
         but2 = QPushButton(text="Space Measurment")
-        self.start_stop_button = QPushButton(text="Start")
-        self.start_stop_button.setIcon(QIcon("icons/start_button_icon.png"))
+        self.create_timer_toggle_button()
         
+
         self.time_view = TimeView(self,AppConfig.ACTIVE_SEN)
         self.space_view = SpaceView(self)
-        but1.clicked.connect(lambda:self.time_view.create_scopes())
-        but2.clicked.connect(lambda:self.space_view.create_scopes())
-
+        self.active_view = self.space_view
+        
+        but1.clicked.connect(lambda:self.switch_view(AppConfig.TIME_VIEW))
+        but2.clicked.connect(lambda:self.switch_view(AppConfig.SPACE_VIEW))
+        
         """Menu"""
-        self.menu_widget.layout.addWidget(but1)
-        self.menu_widget.layout.addWidget(but2)
-        self.menu_widget.layout.addWidget(self.start_stop_button)
-        self.menu_widget.layout.addWidget(self.time_view.info_labels.labels_container)
+        self.menu_widget.layoutVBox.addWidget(but1)
+        self.menu_widget.layoutVBox.addWidget(but2)
+        self.menu_widget.layoutVBox.addWidget(self.toggle_button)
+        self.menu_widget.layoutVBox.addWidget(self.space_view.info_labels.labels_container)
+        self.menu_widget.layoutVBox.addWidget(self.time_view.info_labels.labels_container)
         
         """Window Layout"""
-        self.window_layout.addWidget(self.menu_widget.get_menu_widget())
-        self.window_layout.addWidget(self.plot_container)
+        self.window_layout.addWidget(self.menu_widget.widget)
+        self.plot_view_layout.addWidget(self.plot_container)
+        self.window_layout.addWidget(self.plot_view)
 
         self.setCentralWidget(self.mainWindow)
 
     def app_exit(self, exit: Event):
         exit.set()
 
-            
+    def switch_view(self, view_name: str):
+
+        if not self.active_view.hidden:
+            self.active_view.deactivate()
+        
+        if view_name == AppConfig.SPACE_VIEW:
+            self.active_view = self.space_view
+        elif view_name == AppConfig.TIME_VIEW:
+            self.active_view = self.time_view
+        else:
+            raise ValueError("Invalid view name")
+
+        if self.active_view.hidden:
+            self.active_view.activate()
+
+    def create_timer_toggle_button(self):
+        self.toggle_button = QPushButton(text="Start")
+        self.toggle_button.setIcon(QIcon("icons/start_button_icon.png"))
+        
 
 class MenuWidgetWrapper:
     def __init__(self, data_processor) -> None:
         self.data_processor = data_processor
-        self.menu = QWidget()
-        self.layout = QVBoxLayout()
-        self.menu.setLayout(self.layout)
+        self.widget = QWidget()
+        self.layoutVBox = QVBoxLayout()
+        self.widget.setLayout(self.layoutVBox)
 
     def get_menu_widget(self)->QWidget:
-        return self.menu
+        return self.widget
     
 class Timer:
     def __init__(self,window:Window) -> None:
         self.window = window
         self.timer = QTimer()
-        self.connect_start_stop()
+        self.timeout = self.timer.timeout
         
     def toggle_timer(self):
         if self.timer.isActive():
             self.timer.stop()
-            self.window.start_stop_button.setText('Start')  
+            self.window.toggle_button.setText('Start')  
         else:
             self.timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)  
-            self.window.start_stop_button.setText('Stop')
+            self.window.toggle_button.setText('Stop')
 
-    def connect_start_stop(self)->None:
-        try:
-            self.window.start_stop_button.clicked.disconnect()
-        except:
-            pass
-        self.window.start_stop_button.clicked.connect(self.toggle_timer)
+    def start(self,period_ms):
+        return self.timer.start(period_ms)
 
-class View(Timer,ABC):
+    def stop(self):
+        return self.timer.stop()
+            
+class View(ABC):
     def __init__(self, window: Window) -> None:
-        super().__init__(window)
+        super().__init__()
         self.window = window
-        window.start_stop_button.setText("Stop")
-        self.active_scopes = []
+        self.timer = Timer(window)
+        self.info_labels = InfoLabels(self,"MAX")
+        self.window.toggle_button.setText("Stop")
+        self.active_scopes:list[TimeScope|SpaceScope] = []
+        self.hidden = False
+        self.connected = False
+        self.timer_connected=False
+        self.window.plot_container.clear()
+        self.hide()
 
     @abstractmethod
-    def create_scopes(self):
-        pass
-    
-    @abstractmethod
-    def display_max(self):
+    def animate_max(self):
         pass
 
     @abstractmethod
-    def display_scopes(self,scopes:list):
+    def animate_scopes(self,scopes:list):
         pass
+
+    @abstractmethod
+    def create_scope(self,axis:Axis)->TimeScope|SpaceScope:
+        pass
+
+    def create_scopes(self)->None: 
+        for axis in Axis:
+            scope = self.create_scope(axis)
+            self.active_scopes.append(scope)  
+            plt_item = scope.get_plt_item()
+            self.window.plot_container.addItem(plt_item,axis.value,0)
+
+    def destroy_scopes(self):
+        if len(self.active_scopes) == AppConfig.N_AXES:
+            for scope in self.active_scopes:
+                self.window.plot_container.removeItem(scope.plt_item)
+            self.active_scopes = []
         
     def animate(self,scopes:list):
-        self.display_max()
-        self.display_scopes(self.active_scopes)
+        self.animate_max()
+        self.animate_scopes(self.active_scopes)
+
+    def connect_animate(self):
+        if not self.connected:
+            self.timer.timeout.connect(
+                lambda: self.animate(self.active_scopes)
+            )
+        self.connected = True
+    
+    def disconnect_animate(self):
+        if self.connected:
+            self.timer.timeout.disconnect()
+            self.connected = False
+
+    def show(self)->None:
+        self.window.plot_view.show()
+        self.create_scopes()
+        self.info_labels.labels_container.show()
+        self.hidden=False
+
+    def hide(self)->None:
+        self.window.plot_view.hide()
+        self.destroy_scopes()
+        self.info_labels.labels_container.hide()
+        self.hidden=True
+
+    def activate(self):
+        self.connect_animate()
+        self.connect_timer_toggle()
+        self.show()
+        self.timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
+         
+    def deactivate(self):
+        self.hide()
+        self.timer.stop()
+        self.disconnect_animate()
+        self.disconnect_timer_toggle()
+
+    def connect_timer_toggle(self):
+        if not self.timer_connected:
+            self.window.toggle_button.clicked.connect(self.timer.toggle_timer)
+            self.timer_connected=True
+
+    def disconnect_timer_toggle(self):
+        if not self.timer_connected:
+            self.window.toggle_button.clicked.disconnect() 
+            self.timer_connected = False
+        
 
 class TimeView(View):
     def __init__(self,window,sen_n) -> None:
-        super().__init__(window)
         self.current_sensor:int = sen_n
-        self.info_labels = InfoLabels(self,"MAX")
-
-    def create_scopes(self):
-        self.timer.stop()
-        self.active_scopes = []
-        self.window.plot_container.clear()
-        ts_x = TimeScope(self.current_sensor, Axis.x, self.window.data_processor, "sample", "B", "X Axis")
-        ts_y = TimeScope(self.current_sensor, Axis.y, self.window.data_processor, "sample", "B", "Y Axis")
-        ts_z = TimeScope(self.current_sensor, Axis.z, self.window.data_processor, "sample", "B", "Z Axis")
-        self.active_scopes.append(ts_x)
-        self.active_scopes.append(ts_y)
-        self.active_scopes.append(ts_z)
-        self.window.plot_container.addItem(ts_x.get_plt_item(), 0, 0)
-        self.window.plot_container.addItem(ts_y.get_plt_item(), 1, 0)
-        self.window.plot_container.addItem(ts_z.get_plt_item(), 2, 0)
-        try:
-            self.timer.timeout.disconnect()
-        except:
-            pass
-        self.timer.timeout.connect(
-            lambda: self.animate(self.active_scopes)
-        )
-        self.timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
-  
-    def display_max(self):
+        super().__init__(window)
+        
+    def create_scope(self,axis:Axis)->TimeScope:
+        return  TimeScope(self.current_sensor, axis, self.window.data_processor, "sample", "B", f"{axis.as_string()} Axis")
+        
+    def animate_max(self):
         for axis in Axis:
             max_value = self.window.data_processor.get_max(self.current_sensor,axis)
             self.info_labels.set_value(axis,max_value)
     
-    def display_scopes(self,scopes:list[TimeScope]):
+    def animate_scopes(self,scopes:list[TimeScope]):
         for scope in scopes:
             if len(scope.frame) == self.window.data_processor.n_samples:
                 scope.plt_item.clear()
@@ -167,7 +237,7 @@ class TimeView(View):
                 y = scope.convert2Np(scope.frame)
                 x = np.linspace(scope.t, scope.t + n_samples, n_samples)
                 scope.plt_item.setXRange(scope.t, scope.t + n_samples)
-                scope.plt_item.plot(x, y,pen=(0,250,154))
+                scope.plt_item.plot(x, y,pen=pg.mkPen((61,142,201), width=4)) #3d8ec9
                 scope.t += n_samples
                 scope.frame.pop(0)
             scope.add_data_to_frame()
@@ -177,59 +247,43 @@ class TimeView(View):
 class SpaceView(View):
     def __init__(self,window) -> None:
         super().__init__(window)
-        self.info_labels = InfoLabels(self,"MAX")
 
-    def create_scopes(self):
-        self.timer.stop()
-        self.active_scopes = []
-        self.window.plot_container.clear()
-        ss_x = SpaceScope(Axis.x, "x", "B", "X Axis", self.window.data_processor)
-        ss_y = SpaceScope(Axis.y, "y", "B", "Y Axis", self.window.data_processor)
-        ss_z = SpaceScope(Axis.z, "z", "B", "Z Axis", self.window.data_processor)
-        self.active_scopes.append(ss_x)
-        self.active_scopes.append(ss_y)
-        self.active_scopes.append(ss_z)
-        self.window.plot_container.addItem(ss_x.get_plt_item(), 0, 0)
-        self.window.plot_container.addItem(ss_y.get_plt_item(), 1, 0)
-        self.window.plot_container.addItem(ss_z.get_plt_item(), 2, 0)
-        try:
-            self.timer.timeout.disconnect()
-        except:
-            pass
-        self.timer.timeout.connect(
-            lambda: self.animate(self.active_scopes)
-        )
-        self.timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
+    def create_scope(self, axis: Axis) -> TimeScope | SpaceScope:
+        return SpaceScope(axis, axis.as_string(), "B", f"{axis.as_string()} Axis", self.window.data_processor)
 
-    def display_max(self):
-        for axis in Axis:
+    def animate_max(self):
             max_values = self.window.data_processor.get_max_of_all_sen()
-            for value in max_values:
+            for value,axis in zip(max_values,Axis):
                 self.info_labels.set_value(axis,value)
 
-    def display_scopes(self, scopes: list[SpaceScope]):
+    def animate_scopes(self, scopes: list[SpaceScope]):
         for scope in scopes:
             scope.plt_item.clear()
             x = []
             y = []
             x = np.linspace(0, AppConfig.N_SENSORS - 1, AppConfig.N_SENSORS)
             y = scope.convert2Np(scope.frame)
-            scope.plt_item.plot(x, y,pen=(0,250,154), symbolBrush=(0,255,0), symbolPen='w')
+            scope.plt_item.plot(x, y,pen=pg.mkPen((61,142,201), width=5), symbolBrush=(61,142,201), symbolPen='b',symbol='o') 
             scope.frame = []
             scope.add_data_to_frame()
         self.window.data_processor.load_new_sample()
 
 
 class InfoLabels:
-    def __init__(self,view:TimeView|SpaceView,which_info:str) -> None:
+    def __init__(self,view:View,which_info:str) -> None:
         self.window = view.window
+        self.view = view
+        self.which_info = which_info
         self.labels_container = QWidget()
         self.labels_container_layout = QVBoxLayout()
-        self.labels_container_layout.addWidget(QLabel(which_info))
         self.labels_container.setLayout(self.labels_container_layout)
         self.axes_labels:list[QLabel] = []
         self.values_labels:list[QLabel] = []
+
+        self.create_labels()
         
+    def create_labels(self):
+        self.labels_container_layout.addWidget(QLabel(self.which_info))
         for axis in Axis:
             new_axis = self.create_axis(axis)
             new_value = self.create_new_value("-")
@@ -237,7 +291,7 @@ class InfoLabels:
             self.values_labels.append(new_value)
             container = self.create_label_container(new_axis,new_value)
             self.labels_container_layout.addWidget(container)
-        
+
     def create_axis(self,which_axis:Axis)->QLabel:
         return QLabel(text=f"{which_axis.as_string()}: ")
 
@@ -259,7 +313,7 @@ class InfoLabels:
             return QLabel("Invalid Type")
 
     def set_value(self,which_axis:Axis,value:int)->None:
-        self.values_labels[which_axis.value].setText(f"{value} mT")  
+        self.values_labels[which_axis.value].setText(f"{value} mT") 
 
 
 
