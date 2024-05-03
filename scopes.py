@@ -38,10 +38,11 @@ class SpaceScope:
         np_array = np.array(data)
         return np_array
 
-    def add_data_to_frame(self) -> None:
-        for i in range(0, AppConfig.N_SENSORS, 1):
-            sensor_data = self.data_processor.get_one_sensor_raw_data(i)
-            axis_data = self.data_processor.get_one_axis_raw_data(
+    def add_data_to_frame(self,sample) -> None:
+        self.frame = []
+        for sen_num in range(0, AppConfig.N_SENSORS, 1):
+            sensor_data = self.data_processor.get_one_sensor_data(sample,sen_num)
+            axis_data = self.data_processor.get_one_axis_data(
                 sensor_data, self.sen_axis
             )
             self.frame.append(axis_data)
@@ -78,10 +79,11 @@ class TimeScope:
     def get_plt_item(self) -> pg.PlotItem:
         return self.plt_item
 
-    def add_data_to_frame(self) -> None:
-        sensor_data:tuple[int,int,int] = self.data_processor.get_one_sensor_raw_data(self.sen_num)
-        axis_data:int = self.data_processor.get_one_axis_raw_data(sensor_data, self.sen_axis)
+    def add_data_to_frame(self,sample) -> None:
+        sensor_data:tuple[int,int,int] = self.data_processor.get_one_sensor_data(sample,self.sen_num)
+        axis_data:int = self.data_processor.get_one_axis_data(sensor_data, self.sen_axis)
         self.frame.append(axis_data)
+        self.frame.pop(0)
 
     def convert2Np(self, data: list) -> np.ndarray:
         np_array = np.array(data)

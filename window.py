@@ -1,4 +1,5 @@
 from data_processing import DataProcessor, Axis
+from serial_thread import SerialThread
 from app_config import AppConfig
 from scopes import TimeScope, SpaceScope
 
@@ -26,9 +27,11 @@ class Window(QMainWindow):
     def __init__(
         self,
         data_processor: DataProcessor,
+        serial:SerialThread
     ) -> None:
         super().__init__()
         self.data_processor = data_processor
+        self.serial = serial
         self.window_layout = QHBoxLayout()
         self.mainWindow = QWidget()
         self.plot_view = QWidget()
@@ -72,6 +75,7 @@ class Window(QMainWindow):
         self.window_layout.addWidget(self.plot_view)
 
         self.setCentralWidget(self.mainWindow)
+        
 
     def app_exit(self, exit: Event):
         exit.set()
@@ -114,8 +118,12 @@ class Timer:
     def toggle_timer(self):
         if self.timer.isActive():
             self.timer.stop()
+            self.window.serial.running = False
+            self.window.data_processor.running = False
             self.window.toggle_button.setText('Start')  
         else:
+            self.window.serial.running = True
+            self.window.data_processor.running = True
             self.timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)  
             self.window.toggle_button.setText('Stop')
 
@@ -167,7 +175,6 @@ class View(ABC):
     def animate(self,scopes:list):
         self.animate_max()
         self.animate_scopes(self.active_scopes)
-        self.window.data_processor.load_new_sample()
 
     def connect_animate(self):
         if not self.connected:
@@ -201,6 +208,7 @@ class View(ABC):
          
     def deactivate(self):
         self.hide()
+        self.window.data_processor.running = False
         self.timer.stop()
         self.disconnect_animate()
         self.disconnect_timer_toggle()
@@ -230,19 +238,20 @@ class TimeView(View):
             self.info_labels.set_value(axis,max_value)
     
     def animate_scopes(self,scopes:list[TimeScope]):
-        for scope in scopes:
-            if len(scope.frame) == self.window.data_processor.n_samples:
-                scope.plt_item.clear()
-                y = []
-                x = []
-                n_samples = self.window.data_processor.n_samples
-                y = scope.convert2Np(scope.frame)
-                x = np.linspace(scope.t, scope.t + n_samples, n_samples)
-                scope.plt_item.setXRange(scope.t, scope.t + n_samples)
-                scope.plt_item.plot(x, y,pen=(61,142,201))  #mkPen způsobuje low performance
-                scope.t += n_samples
-                scope.frame.pop(0)
-            scope.add_data_to_frame()
+        samples = self.window.data_processor.get_processed_samples()
+        for sample in samples:
+            for scope in scopes:
+                if len(scope.frame) == self.window.data_processor.n_samples:
+                    scope.plt_item.clear()
+                    y = []
+                    x = []
+                    n_samples = self.window.data_processor.n_samples
+                    y = scope.convert2Np(scope.frame)
+                    x = np.linspace(scope.t, scope.t + n_samples, n_samples)
+                    scope.plt_item.setXRange(scope.t, scope.t + n_samples)
+                    scope.plt_item.plot(x, y,pen=(61,142,201))  #mkPen způsobuje low performance
+                    scope.t += n_samples
+                scope.add_data_to_frame(sample)
         
 
 class SpaceView(View):
@@ -258,15 +267,16 @@ class SpaceView(View):
                 self.info_labels.set_value(axis,value)
 
     def animate_scopes(self, scopes: list[SpaceScope]):
-        for scope in scopes:
-            scope.plt_item.clear()
-            x = []
-            y = []
-            x = np.linspace(0, AppConfig.N_SENSORS - 1, AppConfig.N_SENSORS)
-            y = scope.convert2Np(scope.frame)
-            scope.plt_item.plot(x, y,pen=pg.mkPen((61,142,201), width=3), symbolBrush=(61,142,201), symbolPen='b',symbol='o') 
-            scope.frame = []
-            scope.add_data_to_frame()
+        samples = self.window.data_processor.get_processed_samples()
+        for sample in samples:
+            for scope in scopes:
+                scope.plt_item.clear()
+                x = []
+                y = []
+                x = np.linspace(0, AppConfig.N_SENSORS - 1, AppConfig.N_SENSORS)
+                y = scope.convert2Np(scope.frame)
+                scope.plt_item.plot(x, y,pen=pg.mkPen((61,142,201), width=3), symbolBrush=(61,142,201), symbolPen='b',symbol='o') 
+                scope.add_data_to_frame(sample)
 
 
 class InfoLabels:

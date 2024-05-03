@@ -56,7 +56,7 @@ class DataDecode:
         if len(data) != 0:
             print("--------------------------------------------------")
             for i, (x, y, z) in enumerate(data):
-                print(f"sensor number:{i} -> x:{x}, y:{y}, z:{z}")
+                print(f"sensor number:{i} -> x:{x},     y:{y},      z:{z}")
             print("--------------------------------------------------")
 
     def request_new_data(self)->None:
