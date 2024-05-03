@@ -13,9 +13,9 @@ from PySide6.QtWidgets import (
     QGraphicsWidget,
     QGraphicsItem,
     QHBoxLayout,
-    QLabel
+    QLabel,
 )
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon,QFont
 
 import pyqtgraph as pg
 from threading import Event
@@ -41,7 +41,7 @@ class Window(QMainWindow):
         pg.setConfigOptions(antialias=True)
 
         """Containers"""
-        self.menu_widget = MenuWidgetWrapper(self)
+        self.menu_widget = Menu(self)
         self.plot_container = pg.GraphicsLayoutWidget()
         self.plot_container.setAntialiasing(True)
         self.plot_container.setBackground("w")
@@ -95,8 +95,7 @@ class Window(QMainWindow):
         self.toggle_button = QPushButton(text="Start")
         self.toggle_button.setIcon(QIcon("icons/start_button_icon.png"))
         
-
-class MenuWidgetWrapper:
+class Menu:
     def __init__(self, data_processor) -> None:
         self.data_processor = data_processor
         self.widget = QWidget()
@@ -168,6 +167,7 @@ class View(ABC):
     def animate(self,scopes:list):
         self.animate_max()
         self.animate_scopes(self.active_scopes)
+        self.window.data_processor.load_new_sample()
 
     def connect_animate(self):
         if not self.connected:
@@ -239,11 +239,10 @@ class TimeView(View):
                 y = scope.convert2Np(scope.frame)
                 x = np.linspace(scope.t, scope.t + n_samples, n_samples)
                 scope.plt_item.setXRange(scope.t, scope.t + n_samples)
-                scope.plt_item.plot(x, y,pen=(61,142,201))
+                scope.plt_item.plot(x, y,pen=(61,142,201))  #mkPen způsobuje low performance
                 scope.t += n_samples
                 scope.frame.pop(0)
             scope.add_data_to_frame()
-        self.window.data_processor.load_new_sample()
         
 
 class SpaceView(View):
@@ -265,10 +264,9 @@ class SpaceView(View):
             y = []
             x = np.linspace(0, AppConfig.N_SENSORS - 1, AppConfig.N_SENSORS)
             y = scope.convert2Np(scope.frame)
-            scope.plt_item.plot(x, y,pen=pg.mkPen((61,142,201), width=5), symbolBrush=(61,142,201), symbolPen='b',symbol='o') 
+            scope.plt_item.plot(x, y,pen=pg.mkPen((61,142,201), width=3), symbolBrush=(61,142,201), symbolPen='b',symbol='o') 
             scope.frame = []
             scope.add_data_to_frame()
-        self.window.data_processor.load_new_sample()
 
 
 class InfoLabels:
@@ -285,7 +283,9 @@ class InfoLabels:
         self.create_labels()
         
     def create_labels(self):
-        self.labels_container_layout.addWidget(QLabel(self.which_info))
+        heading = QLabel(self.which_info)
+        heading.setMaximumHeight(15)
+        self.labels_container_layout.addWidget(heading)
         for axis in Axis:
             new_axis = self.create_axis(axis)
             new_value = self.create_new_value("-")
@@ -295,22 +295,33 @@ class InfoLabels:
             self.labels_container_layout.addWidget(container)
 
     def create_axis(self,which_axis:Axis)->QLabel:
-        return QLabel(text=f"{which_axis.as_string()}: ")
+        axis_label = QLabel(text=f"{which_axis.as_string()}: ")
+        font = QFont()
+        font.setBold(True)
+        axis_label.setFont(font)
+        axis_label.setMaximumHeight(20)
+        return axis_label
 
     def create_label_container(self,axis:QLabel,value:QLabel)->QWidget:
         label_container = QWidget()
         label_container_layout = QHBoxLayout()
         label_container.setLayout(label_container_layout)
-        
         label_container_layout.addWidget(axis)
         label_container_layout.addWidget(value)
+        label_container.setMaximumHeight(50)
         return label_container
 
     def create_new_value(self,value:int | str)->QLabel:
         if type(value) == int:
-            return QLabel(text=str(value))
+            label = QLabel(text=str(value))
+            label.setMaximumHeight(20)
+            label.setMargin(20)
+            return label
         elif type(value) == str:
-            return(QLabel(text=value))
+            label = QLabel(text=value)
+            label.setMaximumHeight(20)
+            label.setMargin(20)
+            return label
         else:
             return QLabel("Invalid Type")
 

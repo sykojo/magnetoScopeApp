@@ -1,5 +1,7 @@
 
-style = """QProgressBar:horizontal {
+infolabels_style= """"""
+
+app_style = """QProgressBar:horizontal {
     border: 1px solid #3A3939;
     text-align: center;
     padding: 1px;
@@ -746,7 +748,7 @@ QAbstractSpinBox::down-arrow:hover
 
 QLabel
 {
-    border: 0px solid black;
+    border: 3px solid black;
 }
 
 QTabWidget{

@@ -18,7 +18,7 @@ class DataProcessor:
         return self._current_sample
 
     def load_new_sample(self) -> None:
-        self._current_sample = self.serial_thread.get_oldest_sample()
+        self._current_sample = self.serial_thread.get_latest_sample()
         self._calculate_max()
 
     def setNsamples(self, n_samples: int):

@@ -16,19 +16,19 @@ class SerialThread:
         """Periodicaly reads whole serial buffer and appends it to samples buffer"""
         while not self._app_exit.is_set():
             data = self._decode.get_all_sensor_data()
-            # self._decode.print_decoded_data(data)
+            self._decode.print_decoded_data(data)
             with self._samples_buf_lock:
                 self._samples_buf.append(data)
 
             time.sleep(AppConfig.SERIAL_SLEEP)
 
-    def get_oldest_sample(self) -> list[tuple[int, int, int]]:
+    def get_latest_sample(self) -> list[tuple[int, int, int]]:
         """Aquires sa from sample buffer and makes sample buffer empty"""
         returnList = []
         with self._samples_buf_lock:
             returnList = self._samples_buf
             self._samples_buf = []
         try:
-            return returnList[0]  # Returns oldest sample
+            return returnList[-1]  # Returns oldest sample
         except:
             return []

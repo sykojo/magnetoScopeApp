@@ -28,7 +28,7 @@ class DataDecode:
             return []
         if len(raw_data) != 96:
             self.data_miss += 1
-            # print(f"Oh no, we shat the bucket. We arwe so wewe sowy. Shat bucket rate: {(self.data_miss/self.data_hit)*100}%")
+            print(f"Oh no, we shat the bucket. We arwe so wewe sowy. Shat bucket rate: {(self.data_miss/self.data_hit)*100}%")
             return []
         self.data_hit += 1
         return self._decode_fixed(raw_data)

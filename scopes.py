@@ -69,8 +69,6 @@ class TimeScope:
 
         self.frame:list[int] = [0]*self.data_processor.n_samples
 
-        """ self.plt = pg.PlotItem(title="tvojeMama",axisItems={"left":self.y_axis,
-                                                            "bottom":self.x_axis}) """
         self.plt_item = pg.PlotItem(axisItems={"left": self.y_axis, "bottom": self.x_axis})
         self.plt_item.setYRange(-75, 75)
         self.plt_item.showGrid(x=True,y=True,alpha=0.4)
