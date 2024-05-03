@@ -29,7 +29,7 @@ def main():
     # timer.timeout.connect(window.p1.animate)
     # timer.start(AppConfig.PLOT_TIMER_SLEEP_MS)
 
-    serialThread = threading.Thread(target=lambda: serial_thread.run_read_serial())
+    serialThread = threading.Thread(target=lambda: serial_thread.run_read_serial_handshake())
     serialThread.start()
     window.show()
     # sys.exit(app.exec())

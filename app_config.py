@@ -2,14 +2,17 @@ from enum import Enum
 
 
 class AppConfig:
-    SERIAL_SLEEP = 0.01
-    PLOT_TIMER_SLEEP_MS = 20
+    SERIAL_SLEEP = 0.048
+    PLOT_TIMER_SLEEP_MS = 100
     N_SAMPLES = 500
     N_SENSORS = 8
     N_AXES = 3
     ACTIVE_SEN = 7
     SPACE_VIEW = "SpaceView"
     TIME_VIEW = "TimeView"
+    TIME_FOR_MSG_TRANSFER = 0.008 #s
+
+    REQUEST_DATA_CHAR = '?'
 
 
 class Axis(Enum):

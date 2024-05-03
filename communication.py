@@ -1,15 +1,19 @@
 from serial import Serial
+from app_config import AppConfig
 
 
 class CommunicationWrapper:
     def __init__(self, serial: Serial) -> None:
-        self.serial = serial
+        self.serial:Serial = serial
 
-    def get_data(self) -> bytes:
+    def read_serial_buffer(self) -> bytes:
         res = self.serial.read_all()
         if res is None:
             return bytes()
         return res
+    
+    def send_data(self,data_to_send:str)->None:
+        self.serial.write(data_to_send.encode())
 
 
 class DataDecode:
@@ -17,14 +21,15 @@ class DataDecode:
         self.raw_buffer = bytearray()
         self.time_samples = []
         # self.decoded_buffer = list[tuple[int,int,int]]
-        self.communication = communication_wrapper
+        self.communication:CommunicationWrapper = communication_wrapper
         self.data_miss = 0
         self.data_hit = 1
 
     def get_all_sensor_data(self) -> list[tuple[int, int, int]]:
         # lets assume that we are fast enough to alway read 8x32bit of data and we are never late
-        raw_data = self.communication.get_data()
+        raw_data = self.communication.read_serial_buffer()
         if len(raw_data) == 0:
+            print("Empty buffer")
             return []
         if len(raw_data) != 96:
             self.data_miss += 1
@@ -53,3 +58,6 @@ class DataDecode:
             for i, (x, y, z) in enumerate(data):
                 print(f"sensor number:{i} -> x:{x}, y:{y}, z:{z}")
             print("--------------------------------------------------")
+
+    def request_new_data(self)->None:
+        self.communication.send_data(AppConfig.REQUEST_DATA_CHAR)

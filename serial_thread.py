@@ -22,6 +22,16 @@ class SerialThread:
 
             time.sleep(AppConfig.SERIAL_SLEEP)
 
+    def run_read_serial_handshake(self):
+        while not self._app_exit.is_set():
+            self._decode.request_new_data()
+            time.sleep(AppConfig.TIME_FOR_MSG_TRANSFER)
+            data = self._decode.get_all_sensor_data()
+            self._decode.print_decoded_data(data)
+            with self._samples_buf_lock:
+                self._samples_buf.append(data)
+                        
+
     def get_latest_sample(self) -> list[tuple[int, int, int]]:
         """Aquires sa from sample buffer and makes sample buffer empty"""
         returnList = []
