@@ -32,6 +32,8 @@ class SerialThread:
                 #self._decode.print_decoded_data(data)
                 with self._samples_buf_lock:
                     self._samples_buf.append(data)
+            else:
+                time.sleep(0.1)
                         
 
     def get_latest_sample(self) -> list[tuple[int, int, int]]:

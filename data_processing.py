@@ -74,6 +74,8 @@ class DataProcessor:
                     #-----processing functions will modify sample
                     self._processed_samples.append(sample)
                 time.sleep(AppConfig.DATA_PROCESSOR_SLEEP)
+            else:
+                time.sleep(0.1)
 
 
 

@@ -152,7 +152,7 @@ class View(ABC):
         pass
 
     @abstractmethod
-    def animate_scopes(self,scopes:list):
+    def animate_scopes(self,scopes:list,samples:list[list[tuple[int,int,int]]]):
         pass
 
     @abstractmethod
@@ -173,8 +173,9 @@ class View(ABC):
             self.active_scopes = []
         
     def animate(self,scopes:list):
+        samples = self.window.data_processor.get_processed_samples()
         self.animate_max()
-        self.animate_scopes(self.active_scopes)
+        self.animate_scopes(self.active_scopes,samples)
 
     def connect_animate(self):
         if not self.connected:
@@ -208,7 +209,6 @@ class View(ABC):
          
     def deactivate(self):
         self.hide()
-        self.window.data_processor.running = False
         self.timer.stop()
         self.disconnect_animate()
         self.disconnect_timer_toggle()
@@ -237,8 +237,7 @@ class TimeView(View):
             max_value = self.window.data_processor.get_max(self.current_sensor,axis)
             self.info_labels.set_value(axis,max_value)
     
-    def animate_scopes(self,scopes:list[TimeScope]):
-        samples = self.window.data_processor.get_processed_samples()
+    def animate_scopes(self,scopes:list[TimeScope],samples:list[list[tuple[int,int,int]]]):
         for sample in samples:
             for scope in scopes:
                 if len(scope.frame) == self.window.data_processor.n_samples:
@@ -266,8 +265,7 @@ class SpaceView(View):
             for value,axis in zip(max_values,Axis):
                 self.info_labels.set_value(axis,value)
 
-    def animate_scopes(self, scopes: list[SpaceScope]):
-        samples = self.window.data_processor.get_processed_samples()
+    def animate_scopes(self, scopes: list[SpaceScope],samples:list[list[tuple[int,int,int]]]):
         for sample in samples:
             for scope in scopes:
                 scope.plt_item.clear()
