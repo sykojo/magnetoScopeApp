@@ -8,12 +8,15 @@ class AppConfig:
     TIME_FOR_MSG_TRANSFER = 0.012 #s
     DATA_PROCESSOR_SLEEP = 0.008
 
+    DEBUG_MODE_ENABLED = True
+
     N_SAMPLES = 2000
     N_SENSORS = 8
     N_AXES = 3
     ACTIVE_SEN = 7
     SPACE_VIEW = "SpaceView"
     TIME_VIEW = "TimeView"
+    
 
     REQUEST_DATA_CHAR = '?'
 
