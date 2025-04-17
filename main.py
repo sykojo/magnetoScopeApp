@@ -17,7 +17,7 @@ import time
 
 def main():
     app_exit = threading.Event()
-    decode = DataDecode(CommunicationWrapper(Serial("COM12", 921600)))
+    decode = DataDecode(CommunicationWrapper(Serial("COM7", 921600)))
     serial_thread = SerialThread(decode, app_exit)
     data_processor = DataProcessor(serial_thread, AppConfig.N_SAMPLES,AppConfig.N_SENSORS,app_exit)
 
